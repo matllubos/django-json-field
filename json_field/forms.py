@@ -2,10 +2,18 @@ try:
     import json
 except ImportError:  # python < 2.6
     from django.utils import simplejson as json
-from django.forms import fields, util
+
+try:
+    from django.forms.utils import ValidationError
+except ImportError: 
+    from django.forms.util import ValidationError
+
+from django.forms import fields
 
 import datetime
+
 from decimal import Decimal
+
 
 class JSONFormField(fields.Field):
 
@@ -28,6 +36,9 @@ class JSONFormField(fields.Field):
         if value is None:
             return value
 
+        if isinstance(value, (dict, list)):
+            return value
+
         ## Got to get rid of newlines for validation to work
         # Data newlines are escaped so this is safe
         value = value.replace('\r', '').replace('\n', '')
@@ -45,9 +56,9 @@ class JSONFormField(fields.Field):
             try:
                 value = json.dumps(eval(value, json_globals, json_locals), **self.encoder_kwargs)
             except Exception as e: # eval can throw many different errors
-                raise util.ValidationError(str(e))
+                raise ValidationError(str(e))
 
         try:
             return json.loads(value, **self.decoder_kwargs)
         except ValueError as e:
-            raise util.ValidationError(str(e))
+            raise ValidationError(str(e))
